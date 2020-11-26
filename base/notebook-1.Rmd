@@ -1,0 +1,529 @@
+---
+title: "R1"
+output: html_notebook
+---
+
+# Intro
+
+Talking about `R` is kinda difficult for me. The main reason is that I don't precisely know what various CS terms mean. Moreover, I've become acquainted to the `R` philosophy which tries to do things, without regards for good practises and CS theory (and speed).
+
+`R` has two meanings:
+* a programming language specialised for data processing and statistical modelling
+* the interpreter/shell which runs R commands (like IPython)
+
+I suppose this doc will contain many misleading and incorrect uses of CS terms, so apologies for that.
+Please, at any time, ask questions or say anything.
+
+A little history. R is fairly modern (from 93') and is created as an open source ripoff of S, a Bell Labs product :)
+From the basics, when it was imagined as a statistical programming language, it has grown into an extensive data-oriented system, providing many interesting stuff. Examples of those are:
+* Shiny - R powered web app for working with data, modelling and visualising
+* RMarkdown - reproducible notebook like documents
+* plumber - R powered APIs
+* ...
+
+Also, there's been a lot of development of R which changed the way users write code and use R. We could say there's three schools of writing R:
+
+* base R
+* [tidyverse](https://www.tidyverse.org/)
+* [data.table](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-intro.html)
+
+### Usage
+
+For running `R` interactively, I tend to use `Rstudio`. I suppose I started because it was similar to `MATLAB`, has a lot of `R`-specific things, debugging support, is project-oriented and so on.
+I also use `VSC` for some interventions. It's now probably similar to RStudio in features, but I haven't though of switching.
+For some short work, I sometimes run `R` directly from console.
+
+For running `R` script in batch, use `Rscript`.
+
+
+### Startup
+
+The startup mechanism is a bit complex, but what you need to know for our repos is that `R` "sources" some specific files when started.
+For instance, if you run `git clone git@github.com:optimoroute/biz-metrics.git; cd mrr` and start `R` - it will source `.Renviron` and then `.Rprofile`. The first is used for reading in environement variables, while the other contains `R` code to be run at each `R` startup.
+
+To read more about this: `help(Startup)`
+
+
+### Packages
+
+R code comes bundles in packages. The official repository which includes some testing and checking is [CRAN](https://cran.r-project.org/).
+
+CRAN packages are installed using `install.packages("ggplot2")`.
+Packages can also be found on [Github](https://github.com/rstudio/renv) and you can install them using the `remotes` package: `remotes::install_github(rstudio/renv)`.
+
+Loading (aka making the package namespace available) packages is done by `library(ggplot2)` or `require()`, but you can also use package objects by directly referencing them from the package namespace like `ggplot2::ggplot()`
+
+By default, `R` saves downloaded packages to a directory obtained by `.libPaths()`.
+
+
+###  Dependency management
+
+I tend to use [renv](https://rstudio.github.io/renv/articles/renv.html) for managing packages. This works similar to `venv` and keeps a lockfile  called `renv.lock`. It's pretty new and still doesn't allow for managing different `R` versions.
+
+
+### Getting help
+
+You can obtain help from inside `R` on functions and many other topics using `?` or `help()`:
+
+```{r}
+help(max)
+
+?`Startup`
+```
+
+CRAN based packages must have a website which contains a manual, see  e.g. [*data.table*](https://cran.r-project.org/web/packages/data.table/index.html)
+There's a great thing called package vignettes. These are meant to be self-contained R notebooks
+which explain how to use the package. See this intro vignette for [*data.table*](https://cran.r-project.org/web/packages/data.table/vignettes/datatable-intro.html)
+
+*Tidyverse* packages tend to have [nice sites](https://ggplot2.tidyverse.org/)
+with [great references](https://ggplot2.tidyverse.org/reference/index.html).
+
+
+# R Landscape
+
+### Basic operations
+
+```{r}
+# Assignment
+z <- 10
+z = 10 # convention: use this with function args
+
+a <- b <- c <- 10
+a
+
+10 -> r -> e -> w 
+w
+
+# Arithmetics are all vectorised
+1:10 + 1:10
+1:10 + 1
+1:10 + 100:101
+1:10 * 11:20
+
+sample(1:100, 10) >= 10
+
+1:10 %% 2 == 0
+
+# Logical operators - vectorised
+1:10 %% 2 == 0 & 1:10 == 4
+1:10 %% 2 == 0 | 1:10 == 3
+
+# short circuiting (don't use this with vectors)
+FALSE && {message("second"); TRUE}
+FALSE & {message("second"); TRUE}
+
+TRUE || {message("second"); TRUE}
+TRUE | {message("second"); TRUE}
+
+# if you need one result based on vectors, use this:
+any(1:10 %% 2 == 0 & 1:10 == 4)
+all(1:10 %% 2 == 0 | 1:10 == 3)
+
+```
+
+### Intro
+
+> * Everything that exists is an object.
+> * Everything that happens is a function call.
+>
+> — John Chambers
+
+There's two kind of objects:
+
+* Vectors
+  * Atomic Vectors
+    * Length
+      * scalar
+      * multiple length
+    * Data Types
+      * integer
+      * double (numeric)
+      * character
+      * logical
+      * *raw*
+      * *complex*
+  * Lists
+* Nodes
+  * Functions
+  * Environments
+  
+
+### Vectors!
+
+Vectors and `NULL` are de facto all that represents data in `R`. So, everything - scalars, lists, data frames - everything is a vector.
+
+`NULL` is not a vector per se, but is often used a zero-length vector.
+
+Vectors be of length 1 or >1. Length == 1 are called *scalars*.
+
+Vector elements can be:
+
+* all of same data type - ATOMIC vectors
+* of different types - LISTS
+
+Vectors can also have **attributes** - this is like a *named* list of metadata which serves different purposes.
+E.g. the attribute `dimension` turns vectors into matrices and arrays and the attribute `class` runs the S3 "OO" system.
+
+
+#### Atomic Vectors
+
+```{r}
+
+# Scalars
+TRUE
+FALSE
+1.2323
+1.213e9
+1L # integer (Long)
+"string"
+
+# scalars are length 1 vectors
+is.vector(TRUE)
+length(TRUE)
+
+# Generate by data type
+invisible({
+  numeric(length = 1000)
+  double(1000)
+  integer(1000)
+  logical(1000)
+  character(1000)
+})
+
+# Going longer
+1:10 # same as 1:10L
+c(TRUE, FALSE)  # concatenate
+rep(TRUE, 10)
+seq(1, 10, 0.1)
+seq(from = as.Date("2020-01-01"), to = as.Date("2020-01-31"), by = "day")
+
+# c flattens - always makes an atomic vector
+c(c(TRUE, FALSE), c(TRUE, FALSE))  
+
+# data type
+typeof(TRUE)
+typeof(23.4)
+typeof(2L)
+
+
+# Missing values
+# Missing values are not NULL!!!!!
+# This is completely different
+NA # generic
+
+# Each type has its own missing value
+# this can sometimes cause errors because a few functions use type checking
+NA_character_
+NA_real_
+NA_integer_
+
+# most of the time, missing values propagate - be careful
+sum(1, 23, NA)
+sum(1, 23, NA, na.rm = TRUE)
+
+# Checking for NA cannot be done with ==
+
+x <- c(NA, 5)
+x == NA # this is wrong
+is.na(x)
+
+
+# Testing types: is.something(x)
+is.integer(10)
+is.integer(10L)
+
+# Coercing: as.something(x)
+as.integer(123.2)
+as.double(123L)
+
+# Coercing order:
+# character < double < integer < logical
+x <- c(TRUE, TRUE, FALSE)
+sum(x) # number of TRUE
+mean(x) # proportion of TRUE
+
+```
+
+
+#### Lists
+
+Vectors with elements of different types. Tehnically, each element is a reference for another object.
+
+```{r}
+l <- list(
+  1:3, 
+  "a", 
+  c(TRUE, FALSE, TRUE), 
+  c(2.3, 5.9)
+)
+
+typeof(l)
+str(l)  # structure of object
+
+
+is.list(1:5)
+as.list(1:5)
+unlist(as.list(1:5)) # this can have weird results
+```
+
+#### Data Frames / Tibbles
+
+Special sort of list - each list element (aka column/variable) must be of same length.
+This is the basic building block of doing most stuff in `R`. It's a shame that it's sometimes very slow, which we'll probably address during this session
+
+The original `data.frame` sometimes acts funny and unexpected. The `tibble` is a (lightweight) fully compatible alternative with better properties used in the Tidyverse. I use tibble's almost exclusively.
+
+```{r}
+library(tibble)
+
+# helper function
+get_mrr <- function(resources, pricing_plan) {
+  c("ST" = 19, "BUS" = 29, "ENT" = 39)[pricing_plan] * resources
+}
+
+n <- 50
+tbl <- tibble(
+  dates = sample(seq.Date(from = as.Date("2015-01-01"), to = as.Date("2020-12-31"), by = "day"), size = n),
+  resources = sample(1:10, size = n, replace = TRUE),
+  pricing_plan = sample(c("ST", "BUS", "ENT"), size = n, replace = TRUE),
+  mrr = get_mrr(resources, pricing_plan)
+)
+
+tbl$dates[1]
+
+```
+
+
+#### Objects/Details
+
+##### Names
+Objects can have names (for each element). This is used often, especially in lists/data.frames:
+```{r}
+height <- c(borna = 174, marin = 192)
+height["borna"] == height[1]
+
+df <- tibble(height = sample(160:200, 100, replace = TRUE), weight = sample(50:110, 100, replace = TRUE), bmi = weight / (height/100)^2)
+
+mean(df$bmi)
+```
+
+##### What's going on with the woRld
+
+The [lobstr](https://www.tidyverse.org/blog/2018/12/lobstr/)  is great for taking a look at how `R` consumes memory, evaluates code and other stuff.
+Also, because `R` is really bad and unintuitive with copying and using memory, `tracemem()` is a cool tool to see when and what is copied.
+
+
+#### Metadata and S3
+
+* matrices arrays
+* attributes and S3 functions, factors, dates
+
+* Generic function approach
+
+#### Factors
+
+Based on integers
+
+
+#### Dates
+
+Based on numeric
+
+
+### Functions
+
+#### Basics
+
+Components of each function:
+* formals ... list of args
+* body ... code 
+* environment ... where the function is defined
+
+```{r}
+# Function definition
+add_two_numbers <- function(a, b) {
+  a + b
+}
+
+# Calling functions
+add_two_numbers # print functions
+add_two_numbers(10, 11)
+add_two_numbers(a = 10, b = 11)
+add_two_numbers(b = 11, 10)
+
+args <- list(a = 10, b = 11)
+do.call(add_two_numbers, args)
+```
+
+
+#### Other stuff
+
+* **Primitive functions** are some functions which are written in C. These are located only in the `base` package, written by R-core.
+```{r}
+typeof(sum)
+typeof(`[`)
+# can't see their components
+body(sum)
+formals(sum)
+environment(sum)
+```
+
+* Functions are **first-class** citizens in R - they act like any other object
+
+* **Anonymous** functions:
+```{r}
+l <- list(1:1000)
+map(l, function(x) x^2)
+map(l, ~ .^2)
+```
+
+
+* **Lexical** scoping
+
+```{r}
+x <- 10
+g01 <- function() {
+  x <- 20
+  x
+}
+
+g02 <- function() {
+  x
+}
+
+g01()
+x
+g02()
+
+```
+
+
+* Partial-name matching (it's here so we raise attention not to use this)
+
+```{r}
+g03 <- function(value) {
+  value^3
+}
+
+g03(v = 3)
+
+```
+
+
+* Lazy evaluation
+
+```{r}
+g041<- function(value, cond) {
+  cond
+  value^3
+} 
+
+g042 <- function(value, cond) {
+  value^3
+}
+
+g041(value = 3, cond = stop("Stop this right now!"))
+g042(value = 3, cond = stop("Stop this right now!"))
+
+```
+
+* Function Forms
+  * prefix
+  * infix
+  * replacement
+  * special
+  * Borna remember: everything that happens is a function call
+  
+```{r}
+`%+%` <- function(a, b) paste0(a, b)
+
+# prefix
+`%+%`("borna", "spalat")
+# infix
+"borna" %+% "spalat"
+```
+
+
+### Control Flow
+
+```{r}
+
+# if-else
+if (runif(1) < 0.5) {
+  print("Yes")
+} else if (Sys.Date() == "2020-11-26") {
+  print("It's today")
+} else {
+  print("No luck :)")
+}
+
+# vectorised ifelse
+x <- sample(c(TRUE, FALSE), 100, replace = TRUE)
+ifelse(x, 1, 0)
+
+# vectorised ifelseif
+y <- sample(c(1:7), 100, replace = TRUE)
+days_in_week <- dplyr::case_when(
+  y < 6 ~ "radni_dan",
+  y == 6 ~ "subota",
+  TRUE ~ "nedjelja"
+)
+
+
+# Loops
+for (day in days_in_week) {
+  message("The day is: ", day)
+}
+
+for (i in 1:length(days_in_week)) {
+  message("The day is: ", days_in_week[i])
+}
+for (i in seq_along(days_in_week)) {
+  message("The day is: ", days_in_week[i])
+}
+
+# while (isTRUE(something)) {
+#   do this and that
+# }
+
+
+```
+
+
+### Environments
+
+### Conditions
+
+* errors
+* warnings
+* messages
+
+### I/O
+
+```{r}
+# RDS - R's binary format:
+x <- rnorm(1000)
+if (!dir.exists("data")) dir.create("data")
+saveRDS(x, "data/sample_x.RDS")
+x_original <- readRDS("data/sample_x.RDS")
+
+# csv
+write.csv(x, "data/sample_csv.csv", row.names = FALSE)
+df <- read.csv("data/sample_csv.csv")
+typeof(df) # this is not a vector
+
+# modern alternative
+# readr::write_csv(x, "data/sample_csv.csv") # crashes
+readr::write_csv(data.frame(x = x), "data/sample_csv2.csv")
+df <- readr::read_csv("data/sample_csv2.csv")
+
+
+# Fast reading of large csvs
+# data.table::fread
+# https://jozef.io/r917-fread-comparisons/
+
+# JSON
+# jsonlite::fromJSON
+
+
+```
